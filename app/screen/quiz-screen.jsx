@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Easing, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Easing, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +33,10 @@ export default function QuizScreen() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TOTAL_QUIZ_TIME);
+
+  // ── Modal Visibility States (replaces Alert.alert) ──
+  const [finishModalVisible, setFinishModalVisible] = useState(false);
+  const [exitModalVisible, setExitModalVisible] = useState(false);
 
   const scrollRef = useRef(null);
   const progress = useRef(new Animated.Value(0)).current;
@@ -100,17 +104,11 @@ export default function QuizScreen() {
 
   const barWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
 
+  // ── Finish Logic: Opens custom modal if there are unanswered questions ──
   const finish = () => {
     const unanswered = total - answeredCount;
     if (unanswered > 0) {
-      Alert.alert(
-        "Finish quiz?",
-        `You still have ${unanswered} unanswered question${unanswered > 1 ? "s" : ""}.`,
-        [
-          { text: "Keep going", style: "cancel" },
-          { text: "Finish", style: "destructive", onPress: () => router.replace(RESULT_ROUTE) },
-        ]
-      );
+      setFinishModalVisible(true);
     } else {
       router.replace(RESULT_ROUTE);
     }
@@ -119,11 +117,10 @@ export default function QuizScreen() {
   const handleNext = () => (isLast ? finish() : setCurrentIndex((i) => i + 1));
   const handlePrevious = () => currentIndex > 0 && setCurrentIndex((i) => i - 1);
 
-  const handleExit = () =>
-    Alert.alert("Leave the quiz?", "Your answers will be lost.", [
-      { text: "Stay", style: "cancel" },
-      { text: "Leave", style: "destructive", onPress: () => router.back() },
-    ]);
+  // ── Exit Logic: Opens custom exit warning modal ──
+  const handleExit = () => setExitModalVisible(true);
+
+  const unansweredCount = total - answeredCount;
 
   return (
     <View className="flex-1 bg-[#030A22]">
@@ -306,6 +303,94 @@ export default function QuizScreen() {
             </LinearGradient>
           </Pressable>
         </View>
+
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* CUSTOM MODAL: FINISH QUIZ WARNING                            */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        <Modal
+          visible={finishModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setFinishModalVisible(false)}
+        >
+          <View className="flex-1 items-center justify-center bg-black/70 px-6">
+            <View className="w-full max-w-sm overflow-hidden rounded-3xl border border-amber-500/30 bg-[#0B1536] p-6 shadow-2xl">
+              {/* Icon Header */}
+              <View className="mb-4 h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20">
+                <Ionicons name="alert-circle-outline" size={26} color="#FBBF24" />
+              </View>
+
+              <Text className="text-xl font-bold text-white">Finish quiz?</Text>
+              <Text className="mt-2 text-sm leading-5 text-slate-300">
+                You still have <Text className="font-bold text-amber-400">{unansweredCount} unanswered question{unansweredCount > 1 ? "s" : ""}</Text>. Are you sure you want to finish now?
+              </Text>
+
+              {/* Action Buttons */}
+              <View className="mt-6 flex-row space-x-3">
+                <Pressable
+                  onPress={() => setFinishModalVisible(false)}
+                  className="flex-1 rounded-2xl border border-white/15 bg-white/5 py-3.5 active:bg-white/10"
+                >
+                  <Text className="text-center font-bold text-slate-200">Keep going</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    setFinishModalVisible(false);
+                    router.replace(RESULT_ROUTE);
+                  }}
+                  className="flex-1 rounded-2xl bg-amber-500 py-3.5 active:opacity-85"
+                >
+                  <Text className="text-center font-bold text-slate-950">Finish</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* CUSTOM MODAL: LEAVE QUIZ WARNING                             */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        <Modal
+          visible={exitModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setExitModalVisible(false)}
+        >
+          <View className="flex-1 items-center justify-center bg-black/70 px-6">
+            <View className="w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/30 bg-[#0B1536] p-6 shadow-2xl">
+              {/* Icon Header */}
+              <View className="mb-4 h-12 w-12 items-center justify-center rounded-2xl bg-red-500/20">
+                <Ionicons name="warning-outline" size={26} color="#F87171" />
+              </View>
+
+              <Text className="text-xl font-bold text-white">Leave the quiz?</Text>
+              <Text className="mt-2 text-sm leading-5 text-slate-300">
+                Your progress will be interrupted and your answers will be lost.
+              </Text>
+
+              {/* Action Buttons */}
+              <View className="mt-6 flex-row space-x-3">
+                <Pressable
+                  onPress={() => setExitModalVisible(false)}
+                  className="flex-1 rounded-2xl border border-white/15 bg-white/5 py-3.5 active:bg-white/10"
+                >
+                  <Text className="text-center font-bold text-slate-200">Stay</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    setExitModalVisible(false);
+                    router.back();
+                  }}
+                  className="flex-1 rounded-2xl bg-red-500 py-3.5 active:opacity-85"
+                >
+                  <Text className="text-center font-bold text-white">Leave</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );

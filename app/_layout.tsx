@@ -1,43 +1,50 @@
 import { Stack } from "expo-router";
-import "../global.css"; // Note:    This should always be on your layout
-import { useEffect, useState } from "react";
-import { SafeAreaProvider} from "react-native-safe-area-context";
+import "../global.css";
+import { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Updates from 'expo-updates';
+import * as SystemUI from 'expo-system-ui';
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
 
 export default function RootLayout() {
 
   const onCheckForUpdates = async () => {
-    // Skip checking if running locally in development
     if (__DEV__) return;
     try {
-      // 1. Check if a new update exists on the server
       const update = await Updates.checkForUpdateAsync();
-
       if (update.isAvailable) {
-        // 2. Download the update if available
         await Updates.fetchUpdateAsync();
-        
-        // 3. Restart the app to load the new update
         await Updates.reloadAsync();
-      } else {
-        // alert('No new updates available.');
       }
     } catch (error) {
-      // Handle error (e.g., device is offline)
-      // alert(`Error fetching latest update: ${error.message}`);
+      console.log(error);
     }
   };
-
 
   useEffect(() => {
     onCheckForUpdates();
   }, []);
 
+  // Ensure root background and Android navigation bar are colored
+  useEffect(() => {
+    async function configureAndroidBars() {
+      if (Platform.OS === 'android') {
+        // Set the app window background color
+        await SystemUI.setBackgroundColorAsync('#030A22');
+        
+        // Explicitly style the bottom Android navigation bar
+        await NavigationBar.setBackgroundColorAsync('#030A22'); // Blue background for the navigation bar
+        await NavigationBar.setButtonStyleAsync('light'); // White icons for dark background
+      }
+    }
+
+    configureAndroidBars();
+  }, []);
+
   return (
-  
-       <SafeAreaProvider> 
-           <Stack screenOptions={{headerShown: false}} />
-        </SafeAreaProvider> 
-  
+    <SafeAreaProvider> 
+      <Stack screenOptions={{ headerShown: false }} />
+    </SafeAreaProvider> 
   );
 }
